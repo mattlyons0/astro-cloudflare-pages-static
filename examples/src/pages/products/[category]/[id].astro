@@ -1,0 +1,16 @@
+---
+const { category, id } = Astro.params;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Product: {category} / {id}</title>
+  </head>
+  <body>
+    <p><a href="/">← Back</a></p>
+    <h1>Product</h1>
+    <p>Category: <code>{category}</code></p>
+    <p>ID: <code>{id}</code></p>
+  </body>
+</html>

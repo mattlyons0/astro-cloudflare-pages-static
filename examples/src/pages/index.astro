@@ -1,0 +1,38 @@
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content="{Astro.generator}" />
+    <title>Astro Cloudflare Pages Static - Examples</title>
+  </head>
+  <body>
+    <h1>Examples</h1>
+    <p>
+      Dynamic routes using standard Astro <code>[param]</code> syntax, served
+      statically with parameter injection via Cloudflare Worker.
+    </p>
+
+    <h2>Basic: <code>/users/[id]</code></h2>
+    <p>Single parameter with client-side data fetching.</p>
+    <ul>
+      <li><a href="/users/123">/users/123</a></li>
+      <li><a href="/users/456">/users/456</a></li>
+    </ul>
+
+    <h2>Rest: <code>/docs/[...slug]</code></h2>
+    <p>Captures full path segments.</p>
+    <ul>
+      <li><a href="/docs/intro">/docs/intro</a></li>
+      <li><a href="/docs/api/reference">/docs/api/reference</a></li>
+    </ul>
+
+    <h2>Multiple: <code>/products/[category]/[id]</code></h2>
+    <p>Multiple dynamic segments in one route.</p>
+    <ul>
+      <li><a href="/products/electronics/42">/products/electronics/42</a></li>
+      <li><a href="/products/books/99">/products/books/99</a></li>
+    </ul>
+  </body>
+</html>

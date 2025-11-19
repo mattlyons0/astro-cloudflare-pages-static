@@ -1,0 +1,16 @@
+---
+const { slug } = Astro.params;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Docs: {slug}</title>
+  </head>
+  <body>
+    <p><a href="/">← Back</a></p>
+    <h1>Documentation</h1>
+    <p>Path: <code>{slug}</code></p>
+    <p>Rest parameter <code>[...slug]</code> captures the full path segment.</p>
+  </body>
+</html>
