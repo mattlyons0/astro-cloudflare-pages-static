@@ -1,0 +1,56 @@
+{
+  "name": "astro-cloudflare-pages-static",
+  "version": "0.0.1",
+  "description": "Astro integration for client-side dynamic routes with Cloudflare Pages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && cp src/worker/template.js dist/worker/ && cp src/worker/escape.js dist/worker/ && cp src/worker/escape.d.ts dist/worker/",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mattlyons0/astro-cloudflare-pages-static.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mattlyons0/astro-cloudflare-pages-static/issues"
+  },
+  "homepage": "https://github.com/mattlyons0/astro-cloudflare-pages-static#readme",
+  "keywords": [
+    "astro",
+    "astro-integration",
+    "cloudflare",
+    "cloudflare-pages",
+    "dynamic-routes",
+    "client-side-routing"
+  ],
+  "author": "Matt Lyons",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "astro": "^4.0.0 || ^5.0.0"
+  },
+  "dependencies": {
+    "es-module-lexer": "^1.7.0",
+    "glob": "^12.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "astro": "^5.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^6.4.1"
+  },
+  "packageManager": "npm@11.6.2"
+}

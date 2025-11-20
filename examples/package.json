@@ -1,0 +1,21 @@
+{
+  "name": "example-astro-cloudflare-pages-static",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "wrangler pages dev dist",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.11",
+    "astro": "^5.0.0",
+    "astro-cloudflare-pages-static": "file:.."
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

@@ -1,0 +1,29 @@
+---
+const { id } = Astro.params;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>User: {id}</title>
+  </head>
+  <body>
+    <p><a href="/">← Back</a></p>
+    <h1>User {id}</h1>
+    <p>Parameter <code>{id}</code> was injected by the Worker.</p>
+
+    <div id="content">Loading...</div>
+
+    <script define:vars={{ id }}>
+      // Client-side data fetching example
+      fetch("/api/users.json")
+        .then((r) => r.json())
+        .then((users) => {
+          const user = users[id];
+          document.getElementById("content").innerHTML = user
+            ? `<p>Name: <strong>${user.name}</strong></p>`
+            : `<p>User not found. Try <a href="/users/123">123</a> or <a href="/users/456">456</a></p>`;
+        });
+    </script>
+  </body>
+</html>
