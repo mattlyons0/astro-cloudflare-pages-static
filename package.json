@@ -1,6 +1,6 @@
 {
   "name": "astro-cloudflare-pages-static",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Astro integration for client-side dynamic routes with Cloudflare Pages",
   "type": "module",
   "main": "./dist/index.js",
