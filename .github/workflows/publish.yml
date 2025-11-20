@@ -33,4 +33,5 @@ jobs:
         run: npm run build
 
       - name: Publish to npm
-        run: npm publish # Uses trusted publishing via OIDC
+        run: |
+          [ "$(npm view . version 2>/dev/null)" != "$(node -p "require('./package.json').version")" ] && npm publish || echo "Version already published"
