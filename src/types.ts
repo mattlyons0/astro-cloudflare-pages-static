@@ -11,4 +11,5 @@ export interface DynamicRoute {
   pattern: RegExp;
   shellPath: string;
   params: string[];
+  isDynamic?: boolean;
 }
