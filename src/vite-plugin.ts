@@ -42,7 +42,8 @@ export function createVitePlugin(
   const routeConverter = new RouteConverter(astroConfig);
 
   let config: ResolvedConfig;
-  let dynamicRoutes: DynamicRoute[] = [];
+  /** Map of file path to DynamicRoute */
+  let routesMap = new Map<string, DynamicRoute>();
 
   const scanRoutes = async () => {
     const pagesDir = path.join(fileURLToPath(astroConfig.srcDir), 'pages');
@@ -57,30 +58,30 @@ export function createVitePlugin(
       return;
     }
 
-    dynamicRoutes = files
-      .filter((file) => DYNAMIC_ROUTE_PATTERN.test(file))
-      .map((file) => {
-        const route = routeConverter.fileToRoute(file);
-        const patternRegex = routeConverter.createRoutePattern(route);
-        const shellPath = routeConverter.fileToShellPath(file);
-        const params = routeConverter.extractParamsFromRoute(route);
+    const potentialFiles = files.filter((file) => DYNAMIC_ROUTE_PATTERN.test(file));
+    const updatedRoutesMap = new Map<string, DynamicRoute>();
 
-        return {
-          file,
-          route,
-          pattern: patternRegex,
-          shellPath,
-          params,
-        };
-      });
-
-    if (dynamicRoutes.length > 0) {
-      logger?.info(`Detected ${dynamicRoutes.length} dynamic routes:`);
-      dynamicRoutes.forEach((r) => {
-        const displayPath = r.shellPath.replace(PLACEHOLDER_REGEX, ':$1');
-        logger?.info(`  ${r.route} -> ${displayPath}`);
+    for (const file of potentialFiles) {
+      const fullPath = path.join(pagesDir, file);
+      
+      const route = routeConverter.fileToRoute(file);
+      const patternRegex = routeConverter.createRoutePattern(route);
+      const shellPath = routeConverter.fileToShellPath(file);
+      const params = routeConverter.extractParamsFromRoute(route);
+      
+      updatedRoutesMap.set(fullPath, {
+        file: fullPath,
+        route,
+        pattern: patternRegex,
+        shellPath,
+        params,
+        isDynamic: routesMap.get(fullPath)?.isDynamic,
       });
     }
+    
+    routesMap = updatedRoutesMap;
+    
+    logger?.info(`Detected ${routesMap.size} potential dynamic routes.`);
   };
 
   return {
@@ -95,25 +96,26 @@ export function createVitePlugin(
     transform(code, id) {
       if (!PAGE_FILES_REGEX.test(id)) return;
 
+      // id is absolute path
+      const routeInfo = routesMap.get(id);
+      
+      if (!routeInfo) {
+          // If it's not in the map, it's not a dynamic route we care about
+          return;
+      }
+
       logger?.debug(`Transforming: ${id}`);
 
-      const relativePath = path.relative(config.root, id);
-
-      if (!relativePath.startsWith('src/pages/')) return;
-
-      const isDynamic = DYNAMIC_ROUTE_PATTERN.test(relativePath);
-
-      if (!isDynamic) return;
-
-      logger?.debug(`Processing ${relativePath}`);
-
       if (hasExportedFunction(code, 'getStaticPaths')) {
+        routeInfo.isDynamic = false;
         return;
       }
 
-      logger?.debug(`Injecting getStaticPaths into ${relativePath}`);
+      routeInfo.isDynamic = true;
 
-      const params = routeConverter.extractParamsFromFile(relativePath);
+      logger?.debug(`Injecting getStaticPaths into ${id}`);
+
+      const params = routeConverter.extractParamsFromFile(path.relative(config.root, id));
 
       if (params.length === 0) return;
 
@@ -135,13 +137,23 @@ export function createVitePlugin(
     },
 
     async closeBundle() {
-      if (config.command === 'build' && dynamicRoutes.length > 0) {
-        const distDir = fileURLToPath(astroConfig.outDir);
+      if (config.command === 'build') {
+        const dynamicRoutes = Array.from(routesMap.values()).filter(r => r.isDynamic);
+        
+        if (dynamicRoutes.length > 0) {
+            const distDir = fileURLToPath(astroConfig.outDir);
 
-        await generateCloudflareWorker(distDir, dynamicRoutes, options, logger);
-        await generateRoutesConfig(distDir, dynamicRoutes, options);
+            logger?.info(`Detected ${dynamicRoutes.length} client-side dynamic routes:`);
+            dynamicRoutes.forEach((r) => {
+                const displayPath = r.shellPath.replace(PLACEHOLDER_REGEX, ':$1');
+                logger?.info(`  ${r.route} -> ${displayPath}`);
+            });
 
-        logger?.info('Generated Cloudflare Pages assets');
+            await generateCloudflareWorker(distDir, dynamicRoutes, options, logger);
+            await generateRoutesConfig(distDir, dynamicRoutes, options);
+
+            logger?.info('Generated Cloudflare Pages assets');
+        }
       }
     },
 
@@ -167,27 +179,48 @@ export function createVitePlugin(
         const protocol = req.headers['x-forwarded-proto'] as string || 'http';
 
         try {
-          const result = await serveDynamicRoute(
-            pathname,
-            host,
-            protocol,
-            dynamicRoutes,
-            logger
-          );
+          const potentialMatch = Array.from(routesMap.values()).find(r => r.pattern.test(pathname));
+          
+          if (potentialMatch) {
+             if (potentialMatch.isDynamic === undefined) {
+                 // Load module to trigger transform and determine if dynamic
+                 try {
+                     await server.ssrLoadModule(potentialMatch.file);
+                 } catch (e) {
+                     logger?.error(`Failed to load module ${potentialMatch.file}: ${e}`);
+                 }
+             }
+             
+             if (!potentialMatch.isDynamic) {
+                 return next();
+             }
+             
+             const result = await serveDynamicRoute(
+                pathname,
+                host,
+                protocol,
+                [potentialMatch],
+                logger
+              );
 
-          if (!result) {
-            return next();
+              if (!result) {
+                return next();
+              }
+
+              let html = result.html.replace(
+                PLACEHOLDER_REGEX,
+                (match: string, key: string) => {
+                  const value = result.params[key];
+                  return value !== undefined ? escapeHtml(value) : match;
+                }
+              );
+              res.setHeader('Content-Type', 'text/html; charset=utf-8');
+              res.end(html);
+              return;
           }
+          
+          return next();
 
-          let html = result.html.replace(
-            PLACEHOLDER_REGEX,
-            (match: string, key: string) => {
-              const value = result.params[key];
-              return value !== undefined ? escapeHtml(value) : match;
-            }
-          );
-          res.setHeader('Content-Type', 'text/html; charset=utf-8');
-          res.end(html);
         } catch (error) {
           logger?.error(`Error handling dynamic route: ${error}`);
           res.statusCode = 500;
